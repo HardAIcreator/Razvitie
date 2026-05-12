@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Люди & Цивилизация — Worldbox стиль</title>
+<style>
+* {
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+body {
+  margin: 0;
+  overflow: hidden;
+  background: #0a1f1a;
+  font-family: 'Segoe UI', 'Courier New', monospace;
+  touch-action: none;
+}
+canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: block;
+  cursor: grab;
+}
+canvas:active { cursor: grabbing; }
+#ui {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 20;
+}
+.top-bar {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  border-radius: 32px;
+  padding: 8px 18px;
+  border: 1px solid rgba(255, 200, 100, 0.3);
+  pointer-events: auto;
+  font-family: monospace;
+  font-weight: bold;
+}
+.stat {
+  color: #ffecb3;
+  font-size: 14px;
+  background: rgba(0,0,0,0.5);
+  padding: 4px 10px;
+  border-radius: 20px;
+  letter-spacing: 1px;
+}
+.stat span {
+  color: #ffaa44;
+  font-size: 18px;
+  margin-right: 5px;
+}
+.toolbar {
+  position: fixed;
+  bottom: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(12px);
+  border-radius: 48px;
+  padding: 8px 16px;
+  border-top: 1px solid #ffcc77;
+  pointer-events: auto;
+  z-index: 30;
+}
+.btn {
+  background: #2c2b26;
+  border: none;
+  color: #ffdd99;
+  font-family: monospace;
+  font-weight: bold;
+  font-size: 14px;
+  padding: 6px 14px;
+  border-radius: 40px;
+  cursor: pointer;
+  transition: 0.1s linear;
+  box-shadow: 0 1px 3px black;
+}
+.btn:active {
+  transform: scale(0.96);
+  background: #5a4a2e;
+  color: white;
+}
+.active-speed {
+  background: #d48f2b;
+  color: #1e2a1a;
+  box-shadow: 0 0 8px #ffb347;
+}
+.log-panel {
+  position: fixed;
+  bottom: 85px;
+  right: 10px;
+  width: 210px;
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(4px);
+  border-radius: 12px;
+  padding: 6px 10px;
+  font-size: 10px;
+  color: #b9f3a0;
+  border-left: 3px solid #ffaa44;
+  pointer-events: none;
+  font-family: monospace;
+  z-index: 25;
+}
+.log-entry {
+  border-bottom: 1px solid #ffcc7740;
+  padding: 3px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.detail-panel {
+  position: fixed;
+  bottom: 90px;
+  left: 12px;
+  right: 12px;
+  background: #0f1f17ee;
+  backdrop-filter: blur(10px);
+  border-radius: 24px;
+  border: 1px solid #ffbb66;
+  padding: 12px;
+  transform: translateY(120%);
+  transition: 0.2s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+  pointer-events: auto;
+  z-index: 40;
+  font-family: monospace;
+  color: #f0e6c5;
+}
+.detail-panel.open {
+  transform: translateY(0);
+}
+.close-detail {
+  float: right;
+  background: none;
+  border: none;
+  color: #ffaa66;
+  font-size: 22px;
+  cursor: pointer;
+}
+.progress-bar {
+  height: 5px;
+  background: #2a3a2a;
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 3px 0;
+}
+.progress-fill {
+  height: 100%;
+  background: #ffbb44;
+  width: 0%;
+}
+.skill-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  margin-top: 3px;
+}
+#hint {
+  position: fixed;
+  top: 70px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 10px;
+  color: #ddd9b0;
+  background: #00000080;
+  width: fit-content;
+  margin: auto;
+  padding: 3px 12px;
+  border-radius: 30px;
+  pointer-events: none;
+  font-family: monospace;
+}
+@media (max-width: 600px) {
+  .btn { padding: 4px 10px; font-size: 11px; }
+  .stat { font-size: 10px; }
+}
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<div id="ui">
+  <div class="top-bar">
+    <div class="stat">👥 <span id="peopleCount">0</span></div>
+    <div class="stat">🐗 <span id="animalCount">0</span></div>
+    <div class="stat">🌲 <span id="treeCount">0</span></div>
+    <div class="stat">🏠 <span id="houseCount">0</span></div>
+    <div class="stat">🔥 <span id="fireCount">0</span></div>
+    <div class="stat">⏱️ <span id="simTime">0</span>s</div>
+  </div>
+  <div id="hint">👆 Тап по человеку — выбрать | Долгий тап на земле — еда | Два пальца — зум/движение</div>
+  <div class="log-panel" id="logArea">
+    <div class="log-entry">✨ Добро пожаловать в цивилизацию</div>
+  </div>
+  <div class="detail-panel" id="personDetail">
+    <button class="close-detail" id="closeDetailBtn">✖</button>
+    <div><strong id="detailName">Имя</strong>  <span id="detailState">—</span></div>
+    <div>❤️ Здоровье: <span id="detailHp">0</span>%</div>
+    <div class="progress-bar"><div class="progress-fill" id="hpFill"></div></div>
+    <div>🍗 Еда: <span id="detailFood">0</span>  💧 Вода: <span id="detailWater">0</span>  😴 Усталость: <span id="detailFatigue">0</span></div>
+    <div>📦 Древесина: <span id="detailWood">0</span>  🍖 Мясо: <span id="detailMeat">0</span></div>
+    <div>🧠 Интеллект: <span id="detailIQ">0</span>  📚 Обучение: <span id="detailLearn">0</span></div>
+    <div class="skill-row">🏹 Охота: <span id="skillHunt">0</span>  🪓 Рубка: <span id="skillChop">0</span></div>
+    <div class="skill-row">🏗️ Строительство: <span id="skillBuild">0</span>  🔥 Огонь: <span id="skillFire">0</span></div>
+    <div>👶 Дети: <span id="detailChildren">0</span>  ⚔️ Убийств: <span id="detailKills">0</span></div>
+  </div>
+  <div class="toolbar">
+    <button class="btn" id="pauseBtn">⏸️</button>
+    <button class="btn speed-btn" data-speed="1">1x</button>
+    <button class="btn speed-btn" data-speed="2">2x</button>
+    <button class="btn speed-btn" data-speed="4">4x</button>
+    <button class="btn" id="spawnPersonBtn">➕ Человек</button>
+    <button class="btn" id="spawnAnimalBtn">🐗 Животное</button>
+    <button class="btn" id="addFoodBtn">🍎 Еда+5</button>
+  </div>
+</div>
+
+<script>
+// -------- МИР --------
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+let width = window.innerWidth, height = window.innerHeight;
+
+// Камера
+let camX = 0, camY = 0, zoom = 1.0;
+let worldW = 2200, worldH = 1600;
+function toScreenX(x) { return (x - camX) * zoom; }
+function toScreenY(y) { return (y - camY) * zoom; }
+function toWorldX(px) { return px / zoom + camX; }
+function toWorldY(py) { return py / zoom + camY; }
+
+// Сущности
+let people = [];
+let animals = [];
+let trees = [];
+let houses = [];
+let fires = [];
+let waterSources = []; // статичный источник воды
+let particles = [];
+
+let nextId = 1;
+let generation = 1;
+let paused = false;
+let speed = 1;
+let simTime = 0;
+let selectedPerson = null;
+
+// настройки мира
+const MAX_PEOPLE = 70;
+const MAX_ANIMALS = 35;
+const TREE_COUNT = 70;
+const WATER_COUNT = 3;
+
+// -------- КЛАССЫ --------
+class Person {
+  constructor(x, y, parent1 = null, parent2 = null) {
+    this.id = nextId++;
+    this.x = x; this.y = y;
+    this.vx = (Math.random() - 0.5) * 1.2;
+    this.vy = (Math.random() - 0.5) * 1.2;
+    this.radius = 11;
+    this.hp = 100;
+    this.maxHp = 100;
+    this.hunger = 60;      // 0-100, голод
+    this.thirst = 50;
+    this.fatigue = 30;     // усталость (0 - бодр, 100 - спать)
+    this.inventory = { wood: 0, meat: 0 };  // мясо как еда, древесина для построек
+    this.skills = {
+      hunting: 5 + Math.random() * 15,
+      woodcutting: 5 + Math.random() * 15,
+      building: 5 + Math.random() * 15,
+      firemaking: 5 + Math.random() * 15
+    };
+    this.intelligence = 10 + Math.random() * 25;  // влияет на скорость обучения
+    this.learningRate = 0.8 + Math.random() * 0.9; // множитель прокачки
+    this.age = 0;
+    this.children = 0;
+    this.kills = 0;
+    this.state = "idle";    // idle, moveTo, eat, drink, chopTree, huntAnimal, buildHouse, makeFire, sleep, reproduce
+    this.targetId = null;
+    this.targetX = null; this.targetY = null;
+    this.actionTimer = 0;
+    this.color = `hsl(${30 + this.intelligence * 2}, 65%, 55%)`;
+    this.generation = (parent1 ? Math.max(parent1.generation, parent2?.generation||0) + 1 : 1);
+    if(this.generation > generation) generation = this.generation;
+    this.selected = false;
+    this.trail = [];
+  }
+
+  updateSkill(skillName, gain) {
+    let old = this.skills[skillName];
+    let boost = gain * (0.5 + this.intelligence / 60) * this.learningRate;
+    this.skills[skillName] = Math.min(100, old + boost);
+  }
+
+  addLogMessage(msg) { addLog(msg, this); }
+}
+
+class Animal {
+  constructor(x, y) {
+    this.id = nextId++;
+    this.x = x; this.y = y;
+    this.vx = (Math.random() - 0.5) * 1.0;
+    this.vy = (Math.random() - 0.5) * 1.0;
+    this.hp = 45 + Math.random() * 30;
+    this.maxHp = this.hp;
+    this.radius = 9;
+    this.speed = 0.9;
+    this.type = "boar";
+  }
+}
+
+class Tree {
+  constructor(x, y) { this.x = x; this.y = y; this.woodAmount = 12 + Math.floor(Math.random() * 15); this.radius = 12; }
+}
+class House {
+  constructor(x, y) { this.x = x; this.y = y; this.radius = 18; }
+}
+class Fire {
+  constructor(x, y, ownerId) { this.x = x; this.y = y; this.life = 180; this.radius = 16; this.owner = ownerId; }
+}
+class WaterSource {
+  constructor(x, y) { this.x = x; this.y = y; this.radius = 24; }
+}
+class Particle {
+  constructor(x, y, color, size) { this.x = x; this.y = y; this.vx = (Math.random()-0.5)*2; this.vy = (Math.random()-0.5)*2 - 1; this.life = 1; this.color = color; this.size = size; }
+}
+
+// инициализация мира
+function initWorld() {
+  for(let i=0; i<15; i++) people.push(new Person(Math.random() * worldW, Math.random() * worldH));
+  for(let i=0; i<12; i++) animals.push(new Animal(Math.random() * worldW, Math.random() * worldH));
+  for(let i=0; i<TREE_COUNT; i++) trees.push(new Tree(Math.random() * worldW, Math.random() * worldH));
+  for(let i=0; i<WATER_COUNT; i++) waterSources.push(new WaterSource(200 + Math.random() * (worldW-400), 200 + Math.random() * (worldH-400)));
+  // пару домов и костров
+  for(let i=0;i<2;i++) houses.push(new House(Math.random() * worldW, Math.random() * worldH));
+  for(let i=0;i<2;i++) fires.push(new Fire(Math.random() * worldW, Math.random() * worldH, null));
+  camX = worldW/2 - width/2/zoom; camY = worldH/2 - height/2/zoom;
+}
+initWorld();
+
+// логирование
+function addLog(msg, person=null) {
+  const logDiv = document.getElementById('logArea');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  let prefix = person ? `👤 ${person.id}: ` : '🌍 ';
+  entry.textContent = prefix + msg;
+  logDiv.prepend(entry);
+  if(logDiv.children.length > 12) logDiv.removeChild(logDiv.lastChild);
+}
+
+// поиск ближайших объектов
+function getNearestTree(person) {
+  let best = null, bestDist = 300;
+  for(let t of trees) {
+    let d = Math.hypot(t.x - person.x, t.y - person.y);
+    if(d < bestDist) { bestDist = d; best = t; }
+  }
+  return best;
+}
+function getNearestAnimal(person) {
+  let best = null, bestDist = 280;
+  for(let a of animals) {
+    let d = Math.hypot(a.x - person.x, a.y - person.y);
+    if(d < bestDist) { bestDist = d; best = a; }
+  }
+  return best;
+}
+function getNearestWater(person) {
+  let best = null, bestDist = 400;
+  for(let w of waterSources) {
+    let d = Math.hypot(w.x - person.x, w.y - person.y);
+    if(d < bestDist) { bestDist = d; best = w; }
+  }
+  return best;
+}
+function getNearbyHouse(person) {
+  for(let h of houses) if(Math.hypot(h.x-person.x, h.y-person.y) < 55) return h;
+  return null;
+}
+function getNearbyFire(person) {
+  for(let f of fires) if(Math.hypot(f.x-person.x, f.y-person.y) < 65) return f;
+  return null;
+}
+function canReproduce(p) {
+  if(p.hp < 50 || p.hunger > 60 || p.thirst > 60 || p.fatigue > 50) return false;
+  for(let other of people) {
+    if(other !== p && Math.hypot(other.x-p.x, other.y-p.y) < 38 && other.hp > 50 && other.hunger < 65 && other.thirst < 65 && other.fatigue < 55) {
+      return other;
+    }
+  }
+  return null;
+}
+
+// AI логика для людей (обновление с dt)
+function updatePerson(p, dt) {
+  if(p.hp <= 0) return false;
+  p.age += dt;
+  // потребности
+  p.hunger += dt * 3.5;
+  p.thirst += dt * 3.8;
+  p.fatigue += dt * 1.8 - (getNearbyFire(p) ? 0.9 : 0); // у костра меньше устает
+  if(getNearbyHouse(p)) p.fatigue -= dt * 0.8;
+  if(p.hunger > 100) p.hunger=100; if(p.thirst>100) p.thirst=100; if(p.fatigue>100)p.fatigue=100;
+  if(p.hunger > 85) p.hp -= dt*1.5;
+  if(p.thirst > 85) p.hp -= dt*1.2;
+  if(p.fatigue > 90) p.hp -= dt*2.0;
+  if(p.hp <= 0) return false;
+
+  // Автомат состояний
+  let actionChanged = false;
+  if(p.actionTimer > 0) {
+    p.actionTimer -= dt;
+    if(p.actionTimer <= 0) { p.state = "idle"; p.targetId = null; actionChanged=true; }
+  }
+
+  if(p.state === "idle" || actionChanged) {
+    // приоритеты потребностей
+    if(p.hunger > 65 && p.inventory.meat > 0) { p.state = "eat"; p.actionTimer = 1.2; }
+    else if(p.thirst > 65) { p.state = "drink"; p.actionTimer = 0.9; }
+    else if(p.fatigue > 65 && getNearbyHouse(p)) { p.state = "sleep"; p.actionTimer = 3.5; }
+    else if(p.fatigue > 80) { p.state = "sleep"; p.actionTimer = 4.0; }
+    else if(p.inventory.wood >= 5 && !getNearbyHouse(p) && p.skills.building > 15 && houses.length < 30) { p.state = "buildHouse"; p.actionTimer = 3.2; }
+    else if(p.inventory.wood >= 2 && getNearbyFire(p)===null && p.skills.firemaking > 5 && fires.length < 25) { p.state = "makeFire"; p.actionTimer = 2.0; }
+    else if(p.hunger > 45 && animals.length>0 && p.skills.hunting > 8) { 
+      let prey = getNearestAnimal(p);
+      if(prey) { p.state = "huntAnimal"; p.targetId = prey.id; p.actionTimer = 2.4; }
+    } 
+    else if(p.inventory.wood < 8 && trees.length>0 && p.skills.woodcutting > 5) {
+      let tree = getNearestTree(p);
+      if(tree) { p.state = "chopTree"; p.targetId = tree.id; p.actionTimer = 2.0; }
+    }
+    else if(p.hunger < 30 && p.inventory.meat < 5 && animals.length===0) { /*поиск еды нет*/ }
+    else {
+      // случайное блуждание
+      let angle = Math.random() * Math.PI * 2;
+      p.targetX = p.x + (Math.random() - 0.5) * 180;
+      p.targetY = p.y + (Math.random() - 0.5) * 180;
+      p.state = "moveTo";
+    }
+  }
+
+  // Выполнение действий
+  if(p.state === "moveTo" && p.targetX) {
+    let dx = p.targetX - p.x, dy = p.targetY - p.y, dist = Math.hypot(dx,dy);
+    if(dist < 8) { p.state = "idle"; p.targetX = null; }
+    else { let spd = 1.2 * (1 - p.fatigue/120); p.vx += (dx/dist)*spd*0.3; p.vy += (dy/dist)*spd*0.3; }
+  }
+  else if(p.state === "eat" && p.inventory.meat > 0) {
+    let amount = Math.min(15, p.inventory.meat);
+    p.inventory.meat -= amount;
+    p.hunger = Math.max(0, p.hunger - amount*3.2);
+    p.hp = Math.min(p.maxHp, p.hp + amount*0.7);
+    addLog(`🍖 съел мясо +${amount}`, p);
+    p.state = "idle";
+  }
+  else if(p.state === "drink") {
+    let water = getNearestWater(p);
+    if(water && Math.hypot(water.x-p.x, water.y-p.y) < 28) {
+      p.thirst = Math.max(0, p.thirst - 40);
+      addLog(`💧 напился у воды`, p);
+    } else addLog(`💧 нет воды рядом`, p);
+    p.state = "idle";
+  }
+  else if(p.state === "sleep") {
+    p.fatigue = Math.max(0, p.fatigue - dt * 35);
+    p.hp = Math.min(p.maxHp, p.hp + dt*8);
+    if(p.fatigue <= 5 || p.actionTimer <=0) { p.state="idle"; addLog(`😴 проснулся`, p); }
+  }
+  else if(p.state === "chopTree" && p.targetId) {
+    let tree = trees.find(t => t.id === p.targetId);
+    if(tree && Math.hypot(tree.x-p.x, tree.y-p.y) < 28) {
+      let gain = 3 + p.skills.woodcutting/20;
+      p.inventory.wood += Math.floor(gain);
+      tree.woodAmount -= gain;
+      p.updateSkill("woodcutting", 1.2);
+      addLog(`🪓 добыл древесину +${Math.floor(gain)}`, p);
+      if(tree.woodAmount <= 0) { trees.splice(trees.indexOf(tree),1); p.targetId=null; addLog(`🌲 дерево срублено`,p); }
+      p.state="idle";
+    } else { p.state="idle"; p.targetId=null; }
+  }
+  else if(p.state === "huntAnimal" && p.targetId) {
+    let animal = animals.find(a => a.id === p.targetId);
+    if(animal && Math.hypot(animal.x-p.x, animal.y-p.y) < 25) {
+      let dmg = 12 + p.skills.hunting/6;
+      animal.hp -= dmg;
+      p.updateSkill("hunting", 2.0);
+      spawnParticle(animal.x, animal.y, "#cc5533", 4);
+      if(animal.hp <= 0) {
+        let meatGain = 12 + Math.floor(p.skills.hunting/8);
+        p.inventory.meat += meatGain;
+        p.kills++;
+        animals.splice(animals.indexOf(animal),1);
+        addLog(`🏹 охота удачна, +${meatGain} мяса`, p);
+        p.state="idle";
+        p.targetId=null;
+      } else { addLog(`⚔️ ранил зверя`, p); p.state="idle"; }
+    } else { p.state="idle"; p.targetId=null; }
+  }
+  else if(p.state === "buildHouse" && p.inventory.wood >= 5) {
+    p.inventory.wood -= 5;
+    houses.push(new House(p.x + (Math.random() - 0.5)*35, p.y + (Math.random() - 0.5)*25));
+    p.updateSkill("building", 2.5);
+    addLog(`🏠 построил дом!`, p);
+    p.state="idle";
+  }
+  else if(p.state === "makeFire" && p.inventory.wood >= 2) {
+    p.inventory.wood -= 2;
+    fires.push(new Fire(p.x + (Math.random()-0.5)*30, p.y + (Math.random()-0.5)*30, p.id));
+    p.updateSkill("firemaking", 2.2);
+    addLog(`🔥 развёл костёр`, p);
+    p.state="idle";
+  }
+
+  // размножение (если idle и условия)
+  if(p.state === "idle" && Math.random() < 0.02 * dt) {
+    let partner = canReproduce(p);
+    if(partner) {
+      let childX = (p.x+partner.x)/2 + (Math.random()-0.5)*35;
+      let childY = (p.y+partner.y)/2 + (Math.random()-0.5)*35;
+      let child = new Person(childX, childY, p, partner);
+      // наследование навыков
+      for(let sk in child.skills) {
+        child.skills[sk] = (p.skills[sk] + partner.skills[sk])/2 + (Math.random() * 6 - 3);
+        child.skills[sk] = Math.min(100, Math.max(1, child.skills[sk]));
+      }
+      child.intelligence = (p.intelligence + partner.intelligence)/2 + (Math.random()*6-3);
+      child.learningRate = (p.learningRate + partner.learningRate)/2 * (0.85 + Math.random()*0.5);
+      child.children = 0;
+      p.children++; partner.children++;
+      people.push(child);
+      addLog(`👶 родился ребёнок (G${child.generation})`, p);
+      // легкая усталость
+      p.fatigue += 12; partner.fatigue += 12;
+      p.state = "idle";
+    }
+  }
+
+  // физика движения
+  p.vx += (Math.random() - 0.5)*0.2;
+  p.vx *= 0.92;
+  p.vy *= 0.92;
+  let spdLimit = 1.7 * (1 - p.fatigue/130);
+  if(Math.abs(p.vx) > spdLimit) p.vx = p.vx>0?spdLimit:-spdLimit;
+  if(Math.abs(p.vy) > spdLimit) p.vy = p.vy>0?spdLimit:-spdLimit;
+  p.x += p.vx * dt * 35;
+  p.y += p.vy * dt * 35;
+  p.x = Math.min(worldW - p.radius, Math.max(p.radius, p.x));
+  p.y = Math.min(worldH - p.radius, Math.max(p.radius, p.y));
+  p.trail.push({x:p.x, y:p.y}); if(p.trail.length>10) p.trail.shift();
+  return true;
+}
+
+function updateAnimal(a, dt) {
+  if(a.hp <= 0) return false;
+  let nearPerson = false;
+  for(let p of people) if(Math.hypot(p.x-a.x, p.y-a.y) < 90) { nearPerson=true; break; }
+  if(nearPerson) { let angle = Math.atan2(a.y - people[0].y, a.x - people[0].x); a.vx += Math.cos(angle)*0.9; a.vy += Math.sin(angle)*0.9; }
+  else { a.vx += (Math.random()-0.5)*0.4; a.vy += (Math.random()-0.5)*0.4; }
+  a.vx *= 0.94; a.vy *= 0.94;
+  let maxSp = 1.3; if(Math.abs(a.vx)>maxSp){a.vx *=0.95} if(Math.abs(a.vy)>maxSp){a.vy*=0.95}
+  a.x += a.vx * dt * 28; a.y += a.vy * dt * 28;
+  a.x = Math.min(worldW-8, Math.max(8, a.x)); a.y = Math.min(worldH-8, Math.max(8, a.y));
+  if(a.hp < a.maxHp) a.hp += dt*0.4;
+  return true;
+}
+
+function updateFire(f, dt) { f.life -= dt; return f.life > 0; }
+
+function spawnParticle(x,y,color,count){
+  for(let i=0;i<count;i++) particles.push(new Particle(x+ (Math.random()-0.5)*12, y+ (Math.random()-0.5)*12, color, 2+Math.random()*3));
+}
+function updateParticles(dt) { for(let i=0;i<particles.length;i++){ let p=particles[i]; p.x+=p.vx*dt*10; p.y+=p.vy*dt*10; p.life-=dt*1.5; if(p.life<=0) particles.splice(i,1); } }
+
+// отрисовка
+function draw() {
+  ctx.clearRect(0,0,width,height);
+  ctx.fillStyle = "#2b4a2f"; ctx.fillRect(0,0,width,height);
+  ctx.save(); ctx.scale(zoom, zoom); ctx.translate(-camX, -camY);
+  // сетка
+  ctx.strokeStyle = "#88aa6633"; ctx.lineWidth=1; for(let i=0;i<worldW;i+=100){ ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,worldH); ctx.stroke(); ctx.moveTo(0,i); ctx.lineTo(worldW,i); ctx.stroke();}
+  // вода
+  for(let w of waterSources){ ctx.fillStyle="#3a6ea5aa"; ctx.beginPath(); ctx.arc(w.x,w.y,w.radius,0,Math.PI*2); ctx.fill(); ctx.fillStyle="#8fcbff"; ctx.font="bold 14px monospace"; ctx.fillText("💧",w.x-8,w.y+6);}
+  // деревья
+  for(let t of trees){ ctx.fillStyle="#5a7544"; ctx.beginPath(); ctx.rect(t.x-6,t.y-12,12,20); ctx.fill(); ctx.fillStyle="#3c5a2a"; ctx.beginPath(); ctx.arc(t.x,t.y-8,8,0,Math.PI*2); ctx.fill();}
+  // дома
+  for(let h of houses){ ctx.fillStyle="#ab8e5c"; ctx.fillRect(h.x-14,h.y-10,28,20); ctx.fillStyle="#735c3a"; ctx.fillRect(h.x-6,h.y-5,12,16);}
+  // костры
+  for(let f of fires){ ctx.fillStyle="#ff8822cc"; ctx.beginPath(); ctx.arc(f.x,f.y,12,0,Math.PI*2); ctx.fill(); ctx.fillStyle="#ffcc44"; ctx.beginPath(); ctx.arc(f.x-2,f.y-2,4,0,Math.PI*2); ctx.fill();}
+  // животные
+  for(let a of animals){ ctx.fillStyle="#ad7a4b"; ctx.beginPath(); ctx.ellipse(a.x,a.y,10,7,0,0,Math.PI*2); ctx.fill(); ctx.fillStyle="#5a2e1a"; ctx.fillRect(a.x-7,a.y-3,5,6);}
+  // люди + trail
+  for(let p of people){
+    if(p.trail.length>1){ ctx.beginPath(); ctx.strokeStyle=`${p.color}66`; ctx.lineWidth=4; ctx.moveTo(p.trail[0].x,p.trail[0].y); for(let i=1;i<p.trail.length;i++) ctx.lineTo(p.trail[i].x,p.trail[i].y); ctx.stroke(); }
+    ctx.fillStyle = p.color; ctx.shadowBlur = 8; ctx.beginPath(); ctx.arc(p.x,p.y,p.radius-2,0,Math.PI*2); ctx.fill(); ctx.fillStyle="#2c1e12"; ctx.font = "bold 14px monospace"; ctx.fillText(p.id, p.x-6, p.y-6);
+    ctx.fillStyle = "white"; ctx.font = "10px monospace"; ctx.fillText(`🍗${Math.floor(p.inventory.meat)}`, p.x-8, p.y+5);
+    if(p.selected){ ctx.strokeStyle="gold"; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(p.x,p.y,p.radius+2,0,Math.PI*2); ctx.stroke(); }
+    ctx.shadowBlur=0;
+  }
+  for(let p of particles){ ctx.fillStyle = p.color; ctx.globalAlpha=p.life; ctx.beginPath(); ctx.arc(p.x,p.y,p.size,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;}
+  ctx.restore();
+}
+
+// HUD обновление
+function updateUI() {
+  document.getElementById('peopleCount').innerText = people.length;
+  document.getElementById('animalCount').innerText = animals.length;
+  document.getElementById('treeCount').innerText = trees.length;
+  document.getElementById('houseCount').innerText = houses.length;
+  document.getElementById('fireCount').innerText = fires.length;
+  document.getElementById('simTime').innerText = Math.floor(simTime);
+  if(selectedPerson) {
+    let p = selectedPerson;
+    document.getElementById('detailName').innerHTML = `👤 #${p.id}  Gen${p.generation}`;
+    document.getElementById('detailState').innerText = p.state;
+    document.getElementById('detailHp').innerText = Math.floor(p.hp);
+    document.getElementById('hpFill').style.width = `${p.hp}%`;
+    document.getElementById('detailFood').innerText = Math.floor(p.hunger);
+    document.getElementById('detailWater').innerText = Math.floor(p.thirst);
+    document.getElementById('detailFatigue').innerText = Math.floor(p.fatigue);
+    document.getElementById('detailWood').innerText = p.inventory.wood;
+    document.getElementById('detailMeat').innerText = p.inventory.meat;
+    document.getElementById('detailIQ').innerText = Math.floor(p.intelligence);
+    document.getElementById('detailLearn').innerText = p.learningRate.toFixed(2);
+    document.getElementById('skillHunt').innerText = Math.floor(p.skills.hunting);
+    document.getElementById('skillChop').innerText = Math.floor(p.skills.woodcutting);
+    document.getElementById('skillBuild').innerText = Math.floor(p.skills.building);
+    document.getElementById('skillFire').innerText = Math.floor(p.skills.firemaking);
+    document.getElementById('detailChildren').innerText = p.children;
+    document.getElementById('detailKills').innerText = p.kills;
+    document.getElementById('personDetail').classList.add('open');
+  } else document.getElementById('personDetail').classList.remove('open');
+}
+
+// основной loop
+let lastTimestamp = 0;
+function gameLoop(now) {
+  requestAnimationFrame(gameLoop);
+  if(!lastTimestamp) { lastTimestamp=now; return; }
+  let dt = Math.min(0.033, (now-lastTimestamp)/1000);
+  lastTimestamp = now;
+  if(paused) dt = 0;
+  dt = dt * speed;
+  if(dt>0.05) dt=0.05;
+  simTime += dt;
+  if(!paused) {
+    for(let i=people.length-1;i>=0;i--) if(!updatePerson(people[i], dt)) { if(selectedPerson===people[i]) selectedPerson=null; people.splice(i,1); }
+    for(let i=animals.length-1;i>=0;i--) if(!updateAnimal(animals[i], dt)) animals.splice(i,1);
+    for(let i=fires.length-1;i>=0;i--) if(!updateFire(fires[i], dt)) fires.splice(i,1);
+    updateParticles(dt);
+    if(people.length<5 && !paused){ let newOne = new Person(Math.random()*worldW, Math.random()*worldH); people.push(newOne); addLog(`✨ новый поселенец пришёл`, newOne);}
+    if(animals.length<8 && Math.random()<0.03) animals.push(new Animal(Math.random()*worldW, Math.random()*worldH));
+  }
+  draw();
+  updateUI();
+}
+requestAnimationFrame(gameLoop);
+
+// тач и мышь управление
+let dragMode=false, lastX, lastY;
+canvas.addEventListener('mousedown', e=>{ dragMode=true; lastX=e.clientX; lastY=e.clientY; if(!e.shiftKey) canvas.style.cursor='grabbing'; });
+window.addEventListener('mousemove', e=>{ if(dragMode){ let dx=e.clientX-lastX, dy=e.clientY-lastY; camX-=dx/zoom; camY-=dy/zoom; lastX=e.clientX; lastY=e.clientY; } });
+window.addEventListener('mouseup', ()=>dragMode=false);
+canvas.addEventListener('wheel', e=>{ let oldZ=zoom; zoom*= (e.deltaY>0?0.9:1.1); zoom = Math.min(2.8, Math.max(0.45, zoom)); let wx = toWorldX(e.clientX), wy = toWorldY(e.clientY); camX = wx - e.clientX/zoom; camY = wy - e.clientY/zoom; e.preventDefault(); });
+canvas.addEventListener('click', e=>{ let wx = toWorldX(e.clientX), wy = toWorldY(e.clientY); let clicked = null; for(let p of people) if(Math.hypot(p.x-wx, p.y-wy) < 18){ clicked=p; break; } if(clicked){ people.forEach(p=>p.selected=false); clicked.selected=true; selectedPerson=clicked; } else { selectedPerson=null; people.forEach(p=>p.selected=false); } });
+// кнопки
+document.getElementById('pauseBtn').onclick = ()=>{ paused=!paused; document.getElementById('pauseBtn').innerText = paused?'▶️':'⏸️'; };
+document.querySelectorAll('.speed-btn').forEach(btn=>{ btn.onclick=()=>{ speed=parseInt(btn.dataset.speed); document.querySelectorAll('.speed-btn').forEach(b=>b.classList.remove('active-speed')); btn.classList.add('active-speed'); }; });
+document.getElementById('spawnPersonBtn').onclick = ()=>{ let p=new Person(Math.random()*worldW, Math.random()*worldH); people.push(p); addLog(`➕ добавлен человек`, p); };
+document.getElementById('spawnAnimalBtn').onclick = ()=>{ animals.push(new Animal(Math.random()*worldW, Math.random()*worldH)); addLog(`🐗 животное появилось`); };
+document.getElementById('addFoodBtn').onclick = ()=>{ for(let p of people) p.inventory.meat+=3; addLog(`🍎 каждому +3 мяса`); };
+document.getElementById('closeDetailBtn').onclick = ()=>{ selectedPerson=null; people.forEach(p=>p.selected=false); document.getElementById('personDetail').classList.remove('open'); };
+
+window.addEventListener('resize',()=>{ width=window.innerWidth; height=window.innerHeight; canvas.width=width; canvas.height=height; });
+canvas.width=width; canvas.height=height;
+</script>
+</body>
+  </html>
